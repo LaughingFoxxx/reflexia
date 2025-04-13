@@ -50,18 +50,6 @@ public class MainController {
                 .exceptionally(throwable ->
                         ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
                 );
-//        return coreService.processText(textRequestDTO)
-//                .thenComposeAsync(processedTextDTO -> {
-//                    documentService.addRequestToSession(
-//                            textRequestDTO.sessionId(),
-//                            textRequestDTO.instruction(),
-//                            textRequestDTO.text(),
-//                            processedTextDTO.result()
-//                            );
-//                    return CompletableFuture.completedFuture(processedTextDTO);
-//                }, taskExecutor)
-//                .thenApply(ResponseEntity::ok)
-//                .exceptionally(throwable -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
     }
 
     // Запрос на создание нового пользователя
@@ -113,13 +101,4 @@ public class MainController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
-
-    // Запрос на получение документа для пользователя
-//    @GetMapping("/get-document")
-//    public ResponseEntity<Document> getOneUserSession(@RequestParam String documentId, @RequestHeader("From") String userEmail) {
-//        log.info("MainController. GET-запрос. Получение сессии пользователя {} по sessionId={}", userEmail, documentId);
-//
-//        Document document = userAndDocumentsService.getOneDocument(userEmail, documentId);
-//        return new ResponseEntity<>(document, HttpStatus.OK);
-//    }
 }

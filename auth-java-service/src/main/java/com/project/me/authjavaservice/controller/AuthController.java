@@ -139,43 +139,4 @@ public class AuthController {
         authService.setNewPasswordForUser(email, newPassword);
         return ResponseEntity.ok("Пароль успешно сменен. Войдите в аккаунт");
     }
-
-//    @PostMapping("/service-auth-token")
-//    public ResponseEntity<?> getAccessTokenForService(@RequestBody ClientServiceAuthRequestDTO requestDTO) {
-//        log.info("AuthController. Запрос от сервиса {} на получение access_токена", requestDTO.clientId());
-//        authService.
-//        return ResponseEntity.ok()
-//    }
-//
-//    @GetMapping("/check")
-//    public ResponseEntity<?> checkCookiesAuthorization(@CookieValue(value = "access_token") String accessToken) {
-//        String email = jwtUtil.validateToken(accessToken);
-//        if (email == null) {
-//            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-//        } else {
-//            return new ResponseEntity<>(HttpStatus.OK);
-//        }
-//    }
-//
-    // Верификация почты при сбросе пароля
-//    @PostMapping("/verify-code")
-//    public ResponseEntity<Map<String, String>> verifyEmailReset(@RequestBody Map<String, String> request) {
-//        log.info("AuthController. POST-запрос. Верификация аккаунта по коду из почты для сброса пароля: email={}, code={}",
-//                request.get("email"), request.get("code"));
-//        authService.verifyEmail(request.get("email"), request.get("code"));
-//        return ResponseEntity.ok(Map.of("type", "reset"));
-//    }
-// Валидация refresh токена
-    //@PostMapping("/validate-refresh-token")
-    //public ResponseEntity<Map<String, String>> validateRefreshToken(@CookieValue(value = "refresh_token") String refreshToken) {
-    //    log.info("AuthController. POST-запрос. Валидация refresh_токена: {}", refreshToken);
-    //
-    //    String email = jwtUtil.validateToken(refreshToken);
-    //
-    //    if (email != null) {
-    //        return ResponseEntity.ok(Map.of("valid", "true"));
-    //    }
-    //
-    //    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-    //}
 }

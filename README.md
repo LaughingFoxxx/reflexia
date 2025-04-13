@@ -1,8 +1,8 @@
-# AR_text (Aquarell AI)
-Прототип бэкенда микросервисного приложения по обработке массивов текстовых данных
+# Reflexia
+Backend микросервисного приложения по обработке текстовых данных
 
-## Ключевые технологии:
-  - **Java (Concurrency + Collections):** работа с Kafka через CompletableFuture, ConcurrentHashMap на Core-сервисе
+### Ключевые технологии:
+  - **Java (Concurrency + Collections):** работа с Kafka через CompletableFuture, ConcurrentHashMap (Central-service)
   - **Spring Boot**
   - **Spring Cloud Gateway**
   - **Nimbus JOSE + JWT:** реализован аутентификационный сервис для пользователей и сервисов. Через refresh и access токены для пользователей и OAuth2 для внутренних сервисов приложения
