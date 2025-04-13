@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RestController
@@ -46,6 +47,7 @@ public class MainController {
         }
 
         return coreService.processText(textRequestDTO)
+                .orTimeout(60, TimeUnit.SECONDS)
                 .thenApply(ResponseEntity::ok)
                 .exceptionally(throwable ->
                         ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
