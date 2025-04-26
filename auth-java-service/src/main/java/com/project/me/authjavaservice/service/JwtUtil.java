@@ -120,33 +120,4 @@ public class JwtUtil {
             throw new RuntimeException(e);
         }
     }
-
-//    public String extractToken(String authorizationHeader) {
-//        log.info("JWTUtil. Извлечение токена из запроса");
-//        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-//            log.warn("JWTUtil. Некорректный формат токена");
-//            throw new InvalidOrIncorrectTokenException(HttpStatus.BAD_REQUEST, "Некорректный токен");
-//        }
-//        return authorizationHeader.substring(7);
-//    }
-
-//    public String validateRefreshToken(String token) {
-//        SignedJWT jwt = SignedJWT.parse(token);
-//
-//        JWSVerifier verifier = new MACVerifier(secret);
-//        if (!jwt.verify(verifier)) {
-//            throw new JOSEException("Подпись недействительна");
-//        }
-//
-//        JWTClaimsSet jwtClaimsSet = JWTClaimsSet.parse(token);
-//        if (jwtClaimsSet.getExpirationTime().before(new Date())) {
-//            throw new JOSEException("Токен истек");
-//        }
-//
-//        if (!"refresh".equals(jwtClaimsSet.getClaim("type"))) {
-//            throw new JOSEException("Токен не является refresh_token");
-//        }
-//
-//        return jwtClaimsSet.getSubject();
-//    }
 }

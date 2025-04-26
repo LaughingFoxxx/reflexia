@@ -1,4 +1,4 @@
-package com.project.me.authjavaservice.dto.request;
+package com.project.me.authjavaservice.model.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

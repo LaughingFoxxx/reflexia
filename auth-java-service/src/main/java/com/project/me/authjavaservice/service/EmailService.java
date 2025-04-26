@@ -18,7 +18,7 @@ public class EmailService {
         this.javaMailSender = javaMailSender;
     }
 
-    public void sendVerificationCode(String emailTo, String verificationCode) {
+    public boolean sendVerificationCode(String emailTo, String verificationCode) {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -28,8 +28,10 @@ public class EmailService {
             helper.setText(buildEmailContent(verificationCode), true);
 
             javaMailSender.send(message);
+            return true;
         } catch (MessagingException e) {
-            throw new RuntimeException(e);
+            log.error("EmailService. Ошибка отправки email подтверждения: {}", e.getMessage());
+            return false;
         }
     }
 

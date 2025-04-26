@@ -36,8 +36,8 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().toString();
-        log.info("Запрос по адресу: {}", path);
-        log.info("Cookies в запросе: {}", exchange.getRequest().getCookies());
+        log.info("Gateway-API-Service. Запрос по адресу: {}", path);
+        log.info("Gateway-API-Service. Cookies в запросе: {}", exchange.getRequest().getCookies());
         if (path.startsWith("/api/auth")) {
             return chain.filter(exchange)
                     .doOnError(error -> log.info("Ошибка в Gateway: " + error.getMessage()))
@@ -59,6 +59,7 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
                     return Mono.just(false); // Пропускаем, если Redis недоступен
                 })
                 .flatMap(isBlacklisted -> {
+                    log.info("Gateway-API-Service. Проверка JWT-токена в черном списке");
                     if (isBlacklisted) {
                         log.warn("Токен {} отклонен: находится в черном списке", tokenValue);
                         return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Токен в черном списке"));

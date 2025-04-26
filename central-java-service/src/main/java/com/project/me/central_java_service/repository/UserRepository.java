@@ -1,6 +1,6 @@
 package com.project.me.central_java_service.repository;
 
-import com.project.me.central_java_service.model.User;
+import com.project.me.central_java_service.model.entity.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

@@ -2,10 +2,10 @@ package com.project.me.central_java_service.service;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.result.UpdateResult;
-import com.project.me.central_java_service.dto.SaveDocumentDTO;
+import com.project.me.central_java_service.model.dto.SaveDocumentDTO;
 import com.project.me.central_java_service.exception.BaseCoreServiceException;
-import com.project.me.central_java_service.model.Document;
-import com.project.me.central_java_service.model.User;
+import com.project.me.central_java_service.model.entity.Document;
+import com.project.me.central_java_service.model.entity.User;
 import com.project.me.central_java_service.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,12 +59,25 @@ public class UserAndDocumentsService {
                         () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
                 );
 
-        Document document = new Document();
-        document.setDocumentId(UUID.randomUUID().toString());
-        document.setDocumentName("Новый документ");
-        document.setCreatedAt(LocalDateTime.now());
-        document.setUpdatedAt(LocalDateTime.now());
-        document.setText("");
+        Document document = getNewDocument();
+
+        user.getDocuments().add(document);
+
+        userRepository.save(user);
+        return document;
+    }
+
+    // Создать новый документ с текстом
+    public Document createDocument(String userEmail, String text) {
+        log.info("UserAndDocumentsService. Создание нового документа с текстом для пользователя с email={}", userEmail);
+
+        User user = userRepository.findUserByUserEmail(userEmail)
+                .orElseThrow(
+                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
+                );
+
+        Document document = getNewDocument();
+        document.setText(text);
 
         user.getDocuments().add(document);
 
@@ -109,6 +122,7 @@ public class UserAndDocumentsService {
 
         return true;
     }
+
     public boolean deleteOneDocument(String documentId, String userEmail) {
         log.info("UserAndDocumentsService. Удаление документа с documentId={} для пользователя с email={}", documentId, userEmail);
 
@@ -118,5 +132,17 @@ public class UserAndDocumentsService {
         UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);
 
         return result.getMatchedCount() > 0 && result.getModifiedCount() > 0;
+    }
+
+    public Document getNewDocument() {
+        Document document = new Document();
+
+        document.setDocumentId(UUID.randomUUID().toString());
+        document.setDocumentName("Новый документ");
+        document.setCreatedAt(LocalDateTime.now());
+        document.setUpdatedAt(LocalDateTime.now());
+        document.setText("");
+
+        return document;
     }
 }

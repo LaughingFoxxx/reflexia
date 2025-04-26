@@ -1,4 +1,4 @@
-package com.project.me.central_java_service.dto;
+package com.project.me.central_java_service.model.dto;
 
 import jakarta.validation.constraints.NotNull;
 

@@ -1,5 +1,7 @@
 package com.project.me.authjavaservice.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.me.authjavaservice.exception.*;
 import com.project.me.authjavaservice.model.User;
 import com.project.me.authjavaservice.repository.UserRepository;
@@ -9,8 +11,11 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -20,7 +25,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService blacklistService;
     private final EmailService emailService;
-    private final CoreServiceClient coreServiceClient;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public AuthService(UserRepository userRepository,
@@ -28,18 +34,19 @@ public class AuthService {
                        JwtUtil jwtUtil,
                        TokenBlacklistService blacklistService,
                        EmailService emailService,
-                       CoreServiceClient coreServiceClient
-    ) {
+                       KafkaTemplate<String, String> kafkaTemplate,
+                       ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.blacklistService = blacklistService;
         this.emailService = emailService;
-        this.coreServiceClient = coreServiceClient;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public void register(String email, String password) {
+    public boolean register(String email, String password) {
         log.info("AuthService. Регистрация: email={}", email);
 
         if (userRepository.findByEmail(email).isPresent()) {
@@ -54,9 +61,10 @@ public class AuthService {
         log.info("AuthService. Код подтверждения: \"{}\"", verificationCode);
 
         user.setVerificationCode(verificationCode);
-        emailService.sendVerificationCode(email, verificationCode);
+        boolean res = emailService.sendVerificationCode(email, verificationCode);
 
         userRepository.save(user);
+        return res;
     }
 
     @Transactional
@@ -83,8 +91,12 @@ public class AuthService {
         userRepository.save(user);
         log.info("AuthService. Пользователь с email={} успешно подтвердил адрес электронной почты", email);
 
-        log.info("AuthService. Отправляем запрос на создание пользователя на Core-сервис для пользователя {}", email);
-        coreServiceClient.createNewUser(email);
+        log.info("AuthService. Отправляем запрос на создание пользователя на Core-сервис для пользователя {} через топик \"new-user\"", email);
+        try {
+            kafkaTemplate.send("new-user", objectMapper.writeValueAsString(Map.of("email", email)));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Transactional
@@ -237,11 +249,4 @@ public class AuthService {
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }
-
-    //    public Map<String, String> createAccessTokenForService(String name, String clientSecret) {
-//        log.info("AuthService. Установка access_токена для сервиса {}", name);
-//        ClientService clientService = clientServiceRepository.findClientServiceByName(name)
-//                .orElseThrow(() -> new UserNotFoundException(HttpStatus.UNAUTHORIZED, "Сервис не найден"));
-//
-//    }
 }

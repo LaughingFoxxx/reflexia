@@ -1,4 +1,4 @@
-package com.project.me.central_java_service.model;
+package com.project.me.central_java_service.model.entity;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -18,5 +18,5 @@ public class User {
     @Indexed
     String userEmail;
 
-    private List<com.project.me.central_java_service.model.Document> documents;
+    private List<com.project.me.central_java_service.model.entity.Document> documents;
 }

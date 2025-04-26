@@ -1,4 +1,4 @@
-package com.project.me.central_java_service.model;
+package com.project.me.central_java_service.model.entity;
 
 import lombok.Getter;
 import lombok.Setter;

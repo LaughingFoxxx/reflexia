@@ -1,6 +1,6 @@
 package com.project.me.authjavaservice.controller;
 
-import com.project.me.authjavaservice.dto.request.EmailPasswordRequestDTO;
+import com.project.me.authjavaservice.model.dto.request.EmailPasswordRequestDTO;
 import com.project.me.authjavaservice.service.AuthService;
 import com.project.me.authjavaservice.service.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,9 +32,10 @@ public class AuthController {
     public ResponseEntity<String> register(@RequestBody @Valid EmailPasswordRequestDTO requestDTO) {
         log.info("AuthController. POST-запрос. Регистрация: email={}", requestDTO.email());
 
-        authService.register(requestDTO.email(), requestDTO.password());
-
-        return ResponseEntity.ok("Регистрация прошла успешно");
+        if (authService.register(requestDTO.email(), requestDTO.password())) {
+            return ResponseEntity.ok("Регистрация прошла успешно");
+        }
+        return ResponseEntity.badRequest().build();
     }
 
     // Вход в аккаунт
@@ -47,7 +48,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Успешный вход"));
     }
 
-    // Валидация access токена на Gateway
+    // Валидация access токена от другого сервиса
     @PostMapping(value = "/validate")
     public ResponseEntity<String> validateTokenForGateway(@RequestBody Map<String, String> mapAccessToken) {
         log.info("AuthController. POST-запрос. Валидация access_токена по запросу от Gateway: {}", mapAccessToken.get("token"));
@@ -130,11 +131,6 @@ public class AuthController {
 
         String email = requestDTO.email();
         String newPassword = requestDTO.password();
-
-        if (email == null || email.trim().isEmpty() || newPassword == null || newPassword.trim().isEmpty()) {
-            log.warn("AuthController. Установка нового пароля отклонена. Email и/или пароль не могут быть пустыми");
-            return ResponseEntity.badRequest().build();
-        }
 
         authService.setNewPasswordForUser(email, newPassword);
         return ResponseEntity.ok("Пароль успешно сменен. Войдите в аккаунт");

@@ -1,11 +1,13 @@
 package com.project.me.central_java_service.controller;
 
-import com.project.me.central_java_service.dto.SaveDocumentDTO;
-import com.project.me.central_java_service.dto.TextRequestDTO;
-import com.project.me.central_java_service.dto.TextResponseDTO;
-import com.project.me.central_java_service.model.Document;
+import com.project.me.central_java_service.model.dto.SaveDocumentDTO;
+import com.project.me.central_java_service.model.dto.TextRequestDTO;
+import com.project.me.central_java_service.model.dto.TextResponseDTO;
+import com.project.me.central_java_service.model.entity.Document;
 import com.project.me.central_java_service.service.CoreService;
+import com.project.me.central_java_service.service.TikaFilesReader;
 import com.project.me.central_java_service.service.UserAndDocumentsService;
+import com.project.me.central_java_service.util.microsoft_file_util.MicrosoftFilesUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.print.Doc;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -22,29 +26,28 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/text")
 public class MainController {
-
     private final CoreService coreService;
     private final UserAndDocumentsService userAndDocumentsService;
+    private final TikaFilesReader tikaFilesReader;
 
     @Autowired
     public MainController(CoreService coreService,
-                          UserAndDocumentsService userAndDocumentsService
+                          UserAndDocumentsService userAndDocumentsService,
+                          TikaFilesReader tikaFilesReader
     ) {
         this.coreService = coreService;
         this.userAndDocumentsService = userAndDocumentsService;
+        this.tikaFilesReader = tikaFilesReader;
     }
 
     // Запрос на обработку текста и занесение его в базу
     @Async(value = "taskExecutor")
     @PostMapping("/process-text")
     public CompletableFuture<ResponseEntity<TextResponseDTO>> processText(
-            @RequestBody TextRequestDTO textRequestDTO,
-            @RequestHeader(value = "From") String emailHeader
-    ) {
+            @RequestBody @Valid TextRequestDTO textRequestDTO,
+            @RequestHeader(value = "From") String emailHeader) {
+
         log.info("MainController. POST-запрос. text={}, instruction={}", textRequestDTO.text().substring(0, Math.min(20, textRequestDTO.text().length())), textRequestDTO.instruction());
-        if (emailHeader == null || emailHeader.trim().isEmpty()) {
-            throw new RuntimeException("Пустой заголовок");
-        }
 
         return coreService.processText(textRequestDTO)
                 .orTimeout(60, TimeUnit.SECONDS)
@@ -52,6 +55,21 @@ public class MainController {
                 .exceptionally(throwable ->
                         ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
                 );
+    }
+
+    // Запрос на считывание файла .doc или .docx
+    @PostMapping("/upload-document-file")
+    public ResponseEntity<Document> uploadMicrosoftFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("From") String userEmail)
+    {
+        log.info("MainController. POST-запрос. Считывание файла: {}", file.getOriginalFilename());
+
+        if (file.isEmpty() || !MicrosoftFilesUtil.isDocOrDocx(file.getOriginalFilename())) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return new ResponseEntity<>(userAndDocumentsService.createDocument(userEmail, tikaFilesReader.readFile(file)), HttpStatus.OK);
     }
 
     // Запрос на создание нового пользователя
@@ -74,7 +92,9 @@ public class MainController {
 
     // Запрос на создание нового документа
     @PostMapping("/create-new-document")
-    public ResponseEntity<Document> createNewDocument(@RequestHeader(value = "From") String userEmail) {
+    public ResponseEntity<Document> createNewDocument(
+            @RequestHeader(value = "From") String userEmail
+    ) {
         log.info("MainController. POST-запрос. Создание нового документа для пользователя email={}", userEmail);
 
         return new ResponseEntity<>(userAndDocumentsService.createDocument(userEmail), HttpStatus.OK);
@@ -94,13 +114,13 @@ public class MainController {
 
     // Запрос на удаление документа
     @DeleteMapping("/delete-document")
-    public ResponseEntity<HttpStatus> deleteDocument(@RequestParam String documentId, @RequestParam String userEmail) {
+    public ResponseEntity<HttpStatus> deleteDocument(@RequestParam String documentId, @RequestHeader("From") String userEmail) {
         log.info("MainController. DELETE-запрос. Удаление одного документа по documentId={} для пользователя с email={}", documentId, userEmail);
 
         if (userAndDocumentsService.deleteOneDocument(documentId, userEmail)) {
-            return ResponseEntity.status(HttpStatus.OK).build();
+            return new ResponseEntity<>(HttpStatus.OK);
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 }

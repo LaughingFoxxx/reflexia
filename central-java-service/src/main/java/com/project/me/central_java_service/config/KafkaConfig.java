@@ -23,4 +23,12 @@ class KafkaConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic createNewUserTopic() {
+        return TopicBuilder.name("new-user")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }
