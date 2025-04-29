@@ -123,6 +123,7 @@ public class UserAndDocumentsService {
         return true;
     }
 
+    // Удалить документ
     public boolean deleteOneDocument(String documentId, String userEmail) {
         log.info("UserAndDocumentsService. Удаление документа с documentId={} для пользователя с email={}", documentId, userEmail);
 
@@ -134,6 +135,7 @@ public class UserAndDocumentsService {
         return result.getMatchedCount() > 0 && result.getModifiedCount() > 0;
     }
 
+    // Получить новый пустой документ
     public Document getNewDocument() {
         Document document = new Document();
 

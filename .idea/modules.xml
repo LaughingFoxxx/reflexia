@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/auth-java-service/auth-java-service.iml" filepath="$PROJECT_DIR$/auth-java-service/auth-java-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/reflexia.iml" filepath="$PROJECT_DIR$/reflexia.iml" />
     </modules>
   </component>

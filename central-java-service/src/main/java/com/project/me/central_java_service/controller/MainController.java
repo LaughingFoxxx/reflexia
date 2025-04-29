@@ -5,9 +5,9 @@ import com.project.me.central_java_service.model.dto.TextRequestDTO;
 import com.project.me.central_java_service.model.dto.TextResponseDTO;
 import com.project.me.central_java_service.model.entity.Document;
 import com.project.me.central_java_service.service.CoreService;
-import com.project.me.central_java_service.service.TikaFilesReader;
 import com.project.me.central_java_service.service.UserAndDocumentsService;
-import com.project.me.central_java_service.util.microsoft_file_util.MicrosoftFilesUtil;
+import com.project.me.central_java_service.service.file_readers.FileReader;
+import com.project.me.central_java_service.service.file_readers.FileReaderFactory;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +17,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.print.Doc;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -28,16 +28,16 @@ import java.util.concurrent.TimeUnit;
 public class MainController {
     private final CoreService coreService;
     private final UserAndDocumentsService userAndDocumentsService;
-    private final TikaFilesReader tikaFilesReader;
+    private final FileReaderFactory fileReaderFactory;
 
     @Autowired
     public MainController(CoreService coreService,
                           UserAndDocumentsService userAndDocumentsService,
-                          TikaFilesReader tikaFilesReader
+                          FileReaderFactory fileReaderFactory
     ) {
         this.coreService = coreService;
         this.userAndDocumentsService = userAndDocumentsService;
-        this.tikaFilesReader = tikaFilesReader;
+        this.fileReaderFactory = fileReaderFactory;
     }
 
     // Запрос на обработку текста и занесение его в базу
@@ -48,7 +48,6 @@ public class MainController {
             @RequestHeader(value = "From") String emailHeader) {
 
         log.info("MainController. POST-запрос. text={}, instruction={}", textRequestDTO.text().substring(0, Math.min(20, textRequestDTO.text().length())), textRequestDTO.instruction());
-
         return coreService.processText(textRequestDTO)
                 .orTimeout(60, TimeUnit.SECONDS)
                 .thenApply(ResponseEntity::ok)
@@ -64,21 +63,15 @@ public class MainController {
             @RequestHeader("From") String userEmail)
     {
         log.info("MainController. POST-запрос. Считывание файла: {}", file.getOriginalFilename());
-
-        if (file.isEmpty() || !MicrosoftFilesUtil.isDocOrDocx(file.getOriginalFilename())) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        return new ResponseEntity<>(userAndDocumentsService.createDocument(userEmail, tikaFilesReader.readFile(file)), HttpStatus.OK);
+        FileReader fileReader = fileReaderFactory.getFileReader(file.getOriginalFilename());
+        return new ResponseEntity<>(userAndDocumentsService.createDocument(userEmail, fileReader.readFile(file)), HttpStatus.OK);
     }
 
     // Запрос на создание нового пользователя
     @PostMapping("/create-new-user")
     public ResponseEntity<HttpStatus> createNewUser(@RequestParam String userEmail) {
         log.info("MainController. POST-запрос от Auth-сервиса. Создание нового пользователя на Core-сервисе. Email={}", userEmail);
-
         userAndDocumentsService.createUser(userEmail);
-
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -86,7 +79,6 @@ public class MainController {
     @GetMapping("/all-user-documents")
     public ResponseEntity<List<Document>> getAllUserSessions(@RequestHeader(value = "From") String userEmail) {
         log.info("MainController. GET-запрос. Получение списка всех документов для {}", userEmail);
-
         return new ResponseEntity<>(userAndDocumentsService.getAllDocuments(userEmail), HttpStatus.OK);
     }
 
@@ -96,7 +88,6 @@ public class MainController {
             @RequestHeader(value = "From") String userEmail
     ) {
         log.info("MainController. POST-запрос. Создание нового документа для пользователя email={}", userEmail);
-
         return new ResponseEntity<>(userAndDocumentsService.createDocument(userEmail), HttpStatus.OK);
     }
 
@@ -122,5 +113,11 @@ public class MainController {
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+
+    @GetMapping("/get-user-email")
+    public ResponseEntity<Map<String, String>> getUserEmail(@RequestHeader("From") String userEmail) {
+        log.info("MainController. GET-запрос. Получение email пользователя с email={}", userEmail);
+        return ResponseEntity.ok().body(Map.of("email", userEmail));
     }
 }
