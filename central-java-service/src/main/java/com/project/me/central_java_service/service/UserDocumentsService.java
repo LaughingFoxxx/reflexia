@@ -17,19 +17,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
-public class UserAndDocumentsService {
+public class UserDocumentsService {
     private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
 
     @Autowired
-    public UserAndDocumentsService(UserRepository userRepository, MongoTemplate mongoTemplate) {
+    public UserDocumentsService(UserRepository userRepository, MongoTemplate mongoTemplate) {
         this.userRepository = userRepository;
         this.mongoTemplate = mongoTemplate;
     }

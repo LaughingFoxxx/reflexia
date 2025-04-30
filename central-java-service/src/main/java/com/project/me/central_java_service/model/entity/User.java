@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -19,4 +20,9 @@ public class User {
     String userEmail;
 
     private List<com.project.me.central_java_service.model.entity.Document> documents;
+
+    public List<com.project.me.central_java_service.model.entity.Document> getDocuments() {
+        Collections.sort(this.documents); // Убедимся, что список отсортирован
+        return this.documents;
+    }
 }
