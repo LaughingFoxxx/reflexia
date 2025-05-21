@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 @Component
 @Scope("prototype")
@@ -22,7 +23,12 @@ public class TXTFileExporter implements FileExporter {
         org.jsoup.nodes.Document htmlDoc = Jsoup.parse(document.getText());
         Elements elements = htmlDoc.body().children();
 
-        File resultFile = new File(exportDTO.fileName() + ".txt");
+        File resultFile = null;
+        try {
+            resultFile = Files.createTempFile(exportDTO.fileName(), ".txt").toFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         StringBuilder text = new StringBuilder();
 

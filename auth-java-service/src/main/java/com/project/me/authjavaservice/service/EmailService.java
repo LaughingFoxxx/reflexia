@@ -96,7 +96,7 @@ public class EmailService {
                         Если вы не запрашивали подтверждение, просто проигнорируйте это письмо.
                     </div>
                     <div class="footer">
-                        © 2025 AR_text. Все права защищены.
+                        © 2025 Reflexia. Все права защищены.
                     </div>
                 </div>
             </body>

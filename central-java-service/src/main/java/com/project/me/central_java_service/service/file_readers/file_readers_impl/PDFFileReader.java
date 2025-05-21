@@ -24,7 +24,7 @@ public class PDFFileReader implements FileReader {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
 
-            htmlContent.append(text.replace("\t", "&emsp;").replace("\n", "<br>"));
+            htmlContent.append(text.replace("\t", "&emsp;").replace("\n", "<br><br>"));
         } catch (IOException e) {
             throw new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Ошибка чтения pdf файла");
         }

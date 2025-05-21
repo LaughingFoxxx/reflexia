@@ -13,6 +13,8 @@ import com.project.me.central_java_service.service.file_readers.FileReaderFactor
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -20,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -63,7 +68,7 @@ public class MainController {
     }
 
     // Запрос на считывание файла .doc или .docx
-    @PostMapping("/upload-document-file")
+    @PostMapping(value = "/upload-document-file", produces = "application/json")
     public ResponseEntity<Document> uploadMicrosoftFile(
             @RequestParam("file") MultipartFile file,
             @RequestHeader("From") String userEmail)
@@ -74,13 +79,20 @@ public class MainController {
     }
 
     @PostMapping("/export-document-file")
-    public ResponseEntity<File> exportFile(
+    public ResponseEntity<Resource> exportFile(
             @RequestHeader("From") String userEmail,
             @RequestBody @Valid DocumentToExportDTO exportDTO
     ) {
         log.info("MainController. POST-запрос. Запрос на экспорт файла с id={} для пользователя с email={}", exportDTO.documentId(), userEmail);
-        var res = exportFileService.exportFile(exportDTO, userEmail);
-        return new ResponseEntity<>(res, HttpStatus.OK);
+        File file = exportFileService.exportFile(exportDTO, userEmail);
+
+        Resource resource;
+        try {
+            resource = new ByteArrayResource(Files.readAllBytes(Path.of(file.getAbsolutePath())));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return ResponseEntity.ok().body(resource);
     }
 
     // Запрос на создание нового пользователя
@@ -108,7 +120,7 @@ public class MainController {
     }
 
     // Запрос на сохранение измнений в документе
-    @PutMapping("/save-document-changes")
+    @PutMapping(value = "/save-document-changes", produces = "application/json")
     public ResponseEntity<HttpStatus> saveDocumentChanges(@RequestBody @Valid SaveDocumentDTO documentDTO, @RequestHeader("From") String userEmail) {
         log.info("MainController. PUT-запрос. Внесение изменений в документ с documentId={} для пользователя с email={}", documentDTO.documentId(), userEmail);
 

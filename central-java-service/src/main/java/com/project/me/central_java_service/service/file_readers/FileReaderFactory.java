@@ -6,9 +6,11 @@ import com.project.me.central_java_service.service.file_readers.file_readers_imp
 import com.project.me.central_java_service.service.file_readers.file_readers_impl.TXTFileReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 @Component
+@Scope("singleton")
 public class FileReaderFactory {
     private final ApplicationContext context;
 

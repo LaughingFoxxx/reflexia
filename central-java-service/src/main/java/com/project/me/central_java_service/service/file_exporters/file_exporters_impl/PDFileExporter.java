@@ -20,17 +20,23 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 @Component
 @Scope("prototype")
 public class PDFileExporter implements FileExporter {
     @Override
     public File exportFile(DocumentToExportDTO exportDTO, Document document) {
-        File tempFile = new File(exportDTO.fileName() + ".pdf");
+        File tempFile = null;
+        try {
+            tempFile = Files.createTempFile(exportDTO.fileName(), ".pdf").toFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         // Настраиваем PDF-документ
         try (FileOutputStream fos = new FileOutputStream(tempFile);
-             PdfWriter writer = new PdfWriter(tempFile);
+             PdfWriter writer = new PdfWriter(fos);
              PdfDocument pdf = new PdfDocument(writer)) {
 
             // Устанавливаем размер страницы и поля (в сантиметрах, преобразуем в пункты: 1 cm = 28.35 points)
@@ -104,15 +110,20 @@ public class PDFileExporter implements FileExporter {
         css.append(".ql-align-right { text-align: right; }");
         css.append(".ql-align-justify { text-align: justify; }");
 
-        // Стили для отступов
+        // Исправленные стили для отступов (используем text-indent и margin-left для точного контроля)
         for (int i = 1; i <= 8; i++) {
-            css.append(".ql-indent-").append(i).append(" { margin-left: ").append(i * 40).append("px; }");
+            css.append(".ql-indent-").append(i)
+                    .append(" { text-indent: ").append(40).append("px; margin-left: ")
+                    .append((i - 1) * 40).append("px; }");
         }
 
-        // Стили для списков
-        css.append("ul, ol { margin-left: 40px; padding-left: 0; }");
-        css.append("ul li { list-style-type: disc; }");
-        css.append("ol li { list-style-type: decimal; }");
+        // Стили для списков с учетом вложенности
+        css.append("ul, ol { margin-left: 40px; padding-left: 0; margin-top: 0; margin-bottom: 0; }");
+        css.append("ul li { list-style-type: disc; margin-bottom: 4px; }");
+        css.append("ol li { list-style-type: decimal; margin-bottom: 4px; }");
+
+        // Стили для вложенных списков
+        css.append("ul ul, ol ul, ul ol, ol ol { margin-left: 40px; }");
 
         // Стили для форматирования текста
         css.append("strong { font-weight: bold; }");

@@ -4,6 +4,7 @@ import com.project.me.central_java_service.exception.BaseCoreServiceException;
 import com.project.me.central_java_service.service.file_readers.FileReader;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.usermodel.CharacterRun;
+import org.apache.poi.hwpf.usermodel.Paragraph;
 import org.apache.poi.hwpf.usermodel.Range;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ public class DocFileReader implements FileReader {
              HWPFDocument document = new HWPFDocument(inputStream)) {
             Range range = document.getRange();
             for (int i = 0; i < range.numParagraphs(); i++) {
-                org.apache.poi.hwpf.usermodel.Paragraph paragraph = range.getParagraph(i);
+                Paragraph paragraph = range.getParagraph(i);
                 for (int j = 0; j < paragraph.numCharacterRuns(); j++) {
                     CharacterRun run = paragraph.getCharacterRun(j);
                     String text = run.text();
@@ -35,7 +36,11 @@ public class DocFileReader implements FileReader {
                         htmlContent.append("<i>");
                     }
 
-                    htmlContent.append(text.replace("\t", "&emsp;").replace("\n", "<br>"));
+                    htmlContent.append(text
+                            .replace("\t", "&emsp;")
+                            .replace("\n", "<br>")
+                            .replace("\r", "<br>")
+                    );
 
                     if (run.isItalic()) {
                         htmlContent.append("</i>");
