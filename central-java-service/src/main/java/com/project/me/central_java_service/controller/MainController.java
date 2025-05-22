@@ -7,9 +7,8 @@ import com.project.me.central_java_service.model.dto.TextResponseDTO;
 import com.project.me.central_java_service.model.entity.Document;
 import com.project.me.central_java_service.service.CoreService;
 import com.project.me.central_java_service.service.ExportFileService;
+import com.project.me.central_java_service.service.ReaderFileService;
 import com.project.me.central_java_service.service.UserDocumentsService;
-import com.project.me.central_java_service.service.file_readers.FileReader;
-import com.project.me.central_java_service.service.file_readers.FileReaderFactory;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,18 +35,18 @@ import java.util.concurrent.TimeUnit;
 public class MainController {
     private final CoreService coreService;
     private final UserDocumentsService userDocumentsService;
-    private final FileReaderFactory fileReaderFactory;
     private final ExportFileService exportFileService;
+    private final ReaderFileService readerFileService;
 
     @Autowired
     public MainController(CoreService coreService,
                           UserDocumentsService userDocumentsService,
-                          FileReaderFactory fileReaderFactory,
-                          ExportFileService exportFileService
+                          ExportFileService exportFileService,
+                          ReaderFileService readerFileService
     ) {
         this.coreService = coreService;
         this.userDocumentsService = userDocumentsService;
-        this.fileReaderFactory = fileReaderFactory;
+        this.readerFileService = readerFileService;
         this.exportFileService = exportFileService;
     }
 
@@ -74,8 +73,8 @@ public class MainController {
             @RequestHeader("From") String userEmail)
     {
         log.info("MainController. POST-запрос. Считывание файла: {}", file.getOriginalFilename());
-        FileReader fileReader = fileReaderFactory.getFileReader(file.getOriginalFilename());
-        return new ResponseEntity<>(userDocumentsService.createDocument(userEmail, fileReader.readFile(file)), HttpStatus.OK);
+        Document document = readerFileService.readFile(userEmail, file.getOriginalFilename(), file);
+        return new ResponseEntity<>(document, HttpStatus.OK);
     }
 
     @PostMapping("/export-document-file")

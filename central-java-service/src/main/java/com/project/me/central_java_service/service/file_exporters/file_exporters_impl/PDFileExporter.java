@@ -34,7 +34,6 @@ public class PDFileExporter implements FileExporter {
             throw new RuntimeException(e);
         }
 
-        // Настраиваем PDF-документ
         try (FileOutputStream fos = new FileOutputStream(tempFile);
              PdfWriter writer = new PdfWriter(fos);
              PdfDocument pdf = new PdfDocument(writer)) {
@@ -43,7 +42,6 @@ public class PDFileExporter implements FileExporter {
             PageSize pageSize = PageSize.A4;
             pdf.setDefaultPageSize(pageSize);
 
-            // Настраиваем конвертер HTML в PDF
             ConverterProperties properties = new ConverterProperties();
             FontProvider fontProvider = new FontProvider();
             fontProvider.addStandardPdfFonts();
@@ -59,16 +57,13 @@ public class PDFileExporter implements FileExporter {
             properties.setFontProvider(fontProvider);
             properties.setBaseUri("");
 
-            // Парсим HTML и добавляем стили для React-Quill
             org.jsoup.nodes.Document htmlDoc = Jsoup.parse(document.getText());
             Element body = htmlDoc.body();
 
-            // Добавляем CSS для обработки стилей React-Quill и параметров DTO
             String css = generateCss(exportDTO);
             Element styleTag = htmlDoc.head().appendElement("style").text(css);
             htmlDoc.head().appendChild(styleTag);
 
-            // Преобразуем HTML в PDF
             HtmlConverter.convertToPdf(htmlDoc.outerHtml(), pdf, properties);
         } catch (IOException e) {
             e.printStackTrace();

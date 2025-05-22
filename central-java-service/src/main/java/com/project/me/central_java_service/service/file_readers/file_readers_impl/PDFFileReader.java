@@ -18,6 +18,7 @@ public class PDFFileReader implements FileReader {
     @Override
     public String readFile(MultipartFile file) {
         StringBuilder htmlContent = new StringBuilder("<html><body>");
+
         try (InputStream inputStream = file.getInputStream();
              PDDocument document = PDDocument.load(inputStream)) {
 

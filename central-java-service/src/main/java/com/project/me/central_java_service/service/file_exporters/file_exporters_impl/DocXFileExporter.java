@@ -27,7 +27,7 @@ public class DocXFileExporter implements FileExporter {
     @Override
     public File exportFile(DocumentToExportDTO exportDTO, Document userDocument) {
         try (XWPFDocument docx = new XWPFDocument()) {
-            // Устанавливаем поля документа
+            // Поля документа
             CTSectPr sectPr = docx.getDocument().getBody().addNewSectPr();
             CTPageMar pageMar = sectPr.addNewPgMar();
 
@@ -44,14 +44,14 @@ public class DocXFileExporter implements FileExporter {
             org.jsoup.nodes.Document htmlDoc = Jsoup.parse(userDocument.getText());
             Elements elements = htmlDoc.body().children();
 
-            // Обрабатываем каждый элемент HTML
+            // HTML
             for (Element element : elements) {
                 XWPFParagraph paragraph = docx.createParagraph();
                 CTSpacing spacing = paragraph.getCTPPr().addNewSpacing();
                 spacing.setLine((int) (exportDTO.lineSpacing() * 240));
                 spacing.setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
 
-                // Устанавливаем выравнивание
+                // Выравнивание
                 if (element.hasClass("ql-align-center")) {
                     paragraph.setAlignment(ParagraphAlignment.CENTER);
                 } else if (element.hasClass("ql-align-right")) {
@@ -60,7 +60,7 @@ public class DocXFileExporter implements FileExporter {
                     paragraph.setAlignment(ParagraphAlignment.BOTH);
                 }
 
-                // Устанавливаем отступы
+                // Отступы
                 String indentClass = element.classNames().stream()
                         .filter(c -> c.startsWith("ql-indent-"))
                         .findFirst()
@@ -70,7 +70,7 @@ public class DocXFileExporter implements FileExporter {
                     paragraph.setIndentationLeft(indentLevel * 720);
                 }
 
-                // Обрабатываем тип элемента
+                // Тип
                 switch (element.tagName().toLowerCase()) {
                     case "p":
                     case "h1":
@@ -110,12 +110,11 @@ public class DocXFileExporter implements FileExporter {
     }
 
     private void processElement(XWPFParagraph paragraph, Element element, DocumentToExportDTO dto, boolean isListItem) {
-        // Создаем начальный XWPFRun для настройки базовых стилей
         XWPFRun run = paragraph.createRun();
         run.setFontFamily(dto.fontName());
         run.setFontSize(dto.fontSize());
 
-        // Устанавливаем стили для заголовков
+        // Стили для заголовков
         if (element.tagName().equalsIgnoreCase("h1")) {
             run.setFontSize(dto.fontSize() + 4);
             run.setBold(true);
@@ -124,12 +123,12 @@ public class DocXFileExporter implements FileExporter {
             run.setBold(true);
         }
 
-        // Добавляем маркер для списка
+        // Маркер для списка
         if (isListItem) {
             run.setText("• ");
         }
 
-        // Обрабатываем узлы с учетом форматирования
+        // Узлы с учетом форматирования
         processNodes(paragraph, element.childNodes(), dto, new Formatting());
     }
 
@@ -163,7 +162,7 @@ public class DocXFileExporter implements FileExporter {
                 }
             } else if (node instanceof Element) {
                 Element child = (Element) node;
-                // Создаем копию текущего форматирования
+                // Копия текущего форматирования
                 Formatting childFormatting = formatting.copy();
 
                 // Применяем форматирование для текущего элемента
@@ -179,7 +178,6 @@ public class DocXFileExporter implements FileExporter {
                         break;
                 }
 
-                // Рекурсивно обрабатываем дочерние узлы с обновленным форматированием
                 processNodes(paragraph, child.childNodes(), dto, childFormatting);
             }
         }
