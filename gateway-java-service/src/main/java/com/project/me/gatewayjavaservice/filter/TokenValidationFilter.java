@@ -3,6 +3,7 @@ package com.project.me.gatewayjavaservice.filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -26,11 +27,16 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
     private static final Logger log = LoggerFactory.getLogger(TokenValidationFilter.class);
     private final WebClient webClient;
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+    private final String gatewayCode;
 
     @Autowired
-    public TokenValidationFilter(WebClient.Builder webClientBuilder, ReactiveRedisTemplate<String, String> reactiveRedisTemplate) {
+    public TokenValidationFilter(WebClient.Builder webClientBuilder,
+                                 ReactiveRedisTemplate<String, String> reactiveRedisTemplate,
+                                 @Value("${service.code}") String gatewayCode
+    ) {
         this.webClient = webClientBuilder.baseUrl("http://localhost:8083").build();
         this.reactiveRedisTemplate = reactiveRedisTemplate;
+        this.gatewayCode = gatewayCode;
     }
 
     @Override
@@ -77,6 +83,7 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
                                 ServerHttpRequest request = exchange.getRequest().mutate()
                                         .header("From", email)
                                         .header("Authorization", "Bearer " + tokenValue) // Опционально: сохраняем для совместимости
+                                        .header("X-Gateway-For", gatewayCode)
                                         .build();
                                 return chain.filter(exchange.mutate().request(request).build());
                             })
