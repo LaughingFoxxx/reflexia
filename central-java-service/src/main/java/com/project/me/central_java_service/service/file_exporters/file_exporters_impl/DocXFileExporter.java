@@ -12,7 +12,6 @@ import org.jsoup.select.Elements;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSpacing;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -22,7 +21,6 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 
 @Component
-@Scope("prototype")
 public class DocXFileExporter implements FileExporter {
     @Override
     public File exportFile(DocumentToExportDTO exportDTO, Document userDocument) {

@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 @Component
-@Scope("singleton")
 public class FileExporterFactory {
     private final ApplicationContext applicationContext;
 

@@ -44,25 +44,32 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getPath().toString();
         log.info("Gateway-API-Service. Запрос по адресу: {}", path);
         log.info("Gateway-API-Service. Cookies в запросе: {}", exchange.getRequest().getCookies());
+
+        // Add X-Gateway-For header to all requests at the start
+        ServerHttpRequest request = exchange.getRequest().mutate()
+                .header("X-Gateway-For", gatewayCode)
+                .build();
+        ServerWebExchange mutatedExchange = exchange.mutate().request(request).build();
+
+        // Skip token validation for /api/auth paths
         if (path.startsWith("/api/auth")) {
-            return chain.filter(exchange)
+            return chain.filter(mutatedExchange)
                     .doOnError(error -> log.info("Ошибка в Gateway: " + error.getMessage()))
                     .doOnSuccess(x -> log.info("Запрос успешно передан дальше"));
         }
 
-        // Извлекаем access_token из cookies
+        // Extract access_token from cookies
         List<HttpCookie> cookies = exchange.getRequest().getCookies().get("access_token");
-        String tokenValue;
         if (cookies == null || cookies.isEmpty()) {
             return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Токен отсутствует в cookies"));
         }
-        tokenValue = cookies.getFirst().getValue(); // Берем первый access_token из cookies
+        String tokenValue = cookies.getFirst().getValue();
 
-        // Проверка токена в черном списке
+        // Check token in blacklist
         return reactiveRedisTemplate.hasKey("blacklist:" + tokenValue)
                 .onErrorResume(e -> {
                     log.error("Ошибка подключения к Redis: {}", e.getMessage());
-                    return Mono.just(false); // Пропускаем, если Redis недоступен
+                    return Mono.just(false); // Proceed if Redis is unavailable
                 })
                 .flatMap(isBlacklisted -> {
                     log.info("Gateway-API-Service. Проверка JWT-токена в черном списке");
@@ -71,21 +78,21 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
                         return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Токен в черном списке"));
                     }
 
-                    // Валидация токена через /auth/validate
+                    // Validate token via /auth/validate
                     return webClient.post()
                             .uri("/auth/validate")
                             .contentType(MediaType.APPLICATION_JSON)
                             .bodyValue(Map.of("token", tokenValue))
+                            .header("X-Gateway-For", gatewayCode) // Ensure header is passed to validation service
                             .retrieve()
                             .bodyToMono(String.class)
                             .flatMap(email -> {
-                                // Добавляем email в заголовок From
-                                ServerHttpRequest request = exchange.getRequest().mutate()
+                                // Add From and Authorization headers
+                                ServerHttpRequest validatedRequest = mutatedExchange.getRequest().mutate()
                                         .header("From", email)
-                                        .header("Authorization", "Bearer " + tokenValue) // Опционально: сохраняем для совместимости
-                                        .header("X-Gateway-For", gatewayCode)
+                                        .header("Authorization", "Bearer " + tokenValue)
                                         .build();
-                                return chain.filter(exchange.mutate().request(request).build());
+                                return chain.filter(mutatedExchange.mutate().request(validatedRequest).build());
                             })
                             .onErrorResume(e -> Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Неверный токен")));
                 });

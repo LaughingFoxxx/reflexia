@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.result.UpdateResult;
 import com.project.me.central_java_service.model.dto.SaveDocumentDTO;
 import com.project.me.central_java_service.exception.BaseCoreServiceException;
+import com.project.me.central_java_service.model.dto.UpdateDocumentNameDTO;
 import com.project.me.central_java_service.model.entity.Document;
 import com.project.me.central_java_service.model.entity.User;
 import com.project.me.central_java_service.repository.UserRepository;
@@ -51,10 +52,7 @@ public class UserDocumentsService {
     public Document createDocument(String userEmail) {
         log.info("UserAndDocumentsService. Создание нового документа для пользователя с email={}", userEmail);
 
-        User user = userRepository.findUserByUserEmail(userEmail)
-                .orElseThrow(
-                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
-                );
+        User user = getUser(userEmail);
 
         Document document = getNewDocument();
 
@@ -68,10 +66,7 @@ public class UserDocumentsService {
     public Document createDocument(String userEmail, String text) {
         log.info("UserAndDocumentsService. Создание нового документа с текстом для пользователя с email={}", userEmail);
 
-        User user = userRepository.findUserByUserEmail(userEmail)
-                .orElseThrow(
-                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
-                );
+        User user = getUser(userEmail);
 
         Document document = getNewDocument();
         document.setText(text);
@@ -86,30 +81,34 @@ public class UserDocumentsService {
     public List<Document> getAllDocuments(String userEmail) {
         log.info("UserAndDocumentsService. Получение всех документов для {}", userEmail);
 
-        User user = userRepository.findUserByUserEmail(userEmail)
-                .orElseThrow(
-                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
-                );
+        User user = getUser(userEmail);
 
         return user.getDocuments();
+    }
+
+    // Обновить имя документа
+    public boolean updateDocumentName(UpdateDocumentNameDTO documentNameDTO, String userEmail) {
+        log.info("UserAndDocumentsService. Обновление имени документа для {}", userEmail);
+
+        User user = getUser(userEmail);
+
+        Document document = getDocumentForUserByDocumentId(user, documentNameDTO.documentId());
+
+        document.setUpdatedAt(LocalDateTime.now());
+        document.setDocumentName(documentNameDTO.name());
+
+        userRepository.save(user);
+
+        return true;
     }
 
     // Сохранить/обновить документ
     public Boolean saveOrUpdateDocument(SaveDocumentDTO documentDTO, String userEmail) {
         log.info("UserAndDocumentsService. Сохранение изменений для документа с id={} пользователя {}",documentDTO.documentId(), userEmail);
 
-        User user = userRepository.findUserByUserEmail(userEmail)
-                .orElseThrow(
-                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
-                );
+        User user = getUser(userEmail);
 
-        Document document = user.getDocuments()
-                .stream()
-                .filter(x -> x.getDocumentId().equals(documentDTO.documentId()))
-                .findFirst()
-                .orElseThrow(
-                        () -> new BaseCoreServiceException(HttpStatus.NOT_FOUND, "Документ не найден")
-                );
+        Document document = getDocumentForUserByDocumentId(user, documentDTO.documentId());
 
         document.setUpdatedAt(LocalDateTime.now());
         document.setDocumentName(documentDTO.documentName());
@@ -133,7 +132,7 @@ public class UserDocumentsService {
     }
 
     // Получить новый пустой документ
-    public Document getNewDocument() {
+    private Document getNewDocument() {
         Document document = new Document();
 
         document.setDocumentId(UUID.randomUUID().toString());
@@ -143,5 +142,23 @@ public class UserDocumentsService {
         document.setText("");
 
         return document;
+    }
+
+    // Получить пользователя по имейлу
+    private User getUser(String userEmail) {
+        return userRepository.findUserByUserEmail(userEmail)
+                .orElseThrow(
+                        () -> new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Пользователь не найден")
+                );
+    }
+
+    private Document getDocumentForUserByDocumentId(User user, String documentId) {
+        return user.getDocuments()
+                .stream()
+                .filter(x -> x.getDocumentId().equals(documentId))
+                .findFirst()
+                .orElseThrow(
+                        () -> new BaseCoreServiceException(HttpStatus.NOT_FOUND, "Документ не найден")
+                );
     }
 }

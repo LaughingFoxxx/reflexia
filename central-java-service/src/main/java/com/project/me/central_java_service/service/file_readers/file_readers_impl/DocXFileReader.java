@@ -6,7 +6,6 @@ import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
-import org.springframework.context.annotation.Scope;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,7 +14,6 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-@Scope("prototype")
 public class DocXFileReader implements FileReader {
     @Override
     public String readFile(MultipartFile file) {
@@ -65,7 +63,6 @@ public class DocXFileReader implements FileReader {
                             .replace("&", "&amp;")
                             .replace("<", "&lt;")
                             .replace(">", "&gt;")
-                            .replace("\t", "&emsp")
                             .replace("\n", "<br>")
                             .replace("\r", "<br>")
                     );

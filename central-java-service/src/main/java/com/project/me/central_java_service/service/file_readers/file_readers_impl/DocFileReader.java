@@ -62,7 +62,6 @@ public class DocFileReader implements FileReader {
                             .replace("&", "&amp;")
                             .replace("<", "&lt;")
                             .replace(">", "&gt;")
-                            .replace("\t", "&emsp")
                             .replace("\n", "<br>")
                             .replace("\r", "<br>")
                     );

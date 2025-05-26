@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 @Component
-@Scope("prototype")
 public class PDFFileReader implements FileReader {
     @Override
     public String readFile(MultipartFile file) {
@@ -25,7 +24,7 @@ public class PDFFileReader implements FileReader {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
 
-            htmlContent.append(text.replace("\t", "&emsp;").replace("\n", "<br><br>"));
+            htmlContent.append(text.replace("\n", "<br><br>"));
         } catch (IOException e) {
             throw new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Ошибка чтения pdf файла");
         }

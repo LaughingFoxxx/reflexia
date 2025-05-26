@@ -6,7 +6,6 @@ import com.project.me.central_java_service.service.file_exporters.FileExporter;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -16,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 @Component
-@Scope("prototype")
 public class TXTFileExporter implements FileExporter {
     @Override
     public File exportFile(DocumentToExportDTO exportDTO, Document document) {

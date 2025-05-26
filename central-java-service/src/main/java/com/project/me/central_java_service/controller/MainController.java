@@ -1,9 +1,6 @@
 package com.project.me.central_java_service.controller;
 
-import com.project.me.central_java_service.model.dto.DocumentToExportDTO;
-import com.project.me.central_java_service.model.dto.SaveDocumentDTO;
-import com.project.me.central_java_service.model.dto.TextRequestDTO;
-import com.project.me.central_java_service.model.dto.TextResponseDTO;
+import com.project.me.central_java_service.model.dto.*;
 import com.project.me.central_java_service.model.entity.Document;
 import com.project.me.central_java_service.service.CoreService;
 import com.project.me.central_java_service.service.ExportFileService;
@@ -77,6 +74,7 @@ public class MainController {
         return new ResponseEntity<>(document, HttpStatus.OK);
     }
 
+    // Запрос на скачивание файла
     @PostMapping("/export-document-file")
     public ResponseEntity<Resource> exportFile(
             @RequestHeader("From") String userEmail,
@@ -122,8 +120,18 @@ public class MainController {
     @PutMapping(value = "/save-document-changes", produces = "application/json")
     public ResponseEntity<HttpStatus> saveDocumentChanges(@RequestBody @Valid SaveDocumentDTO documentDTO, @RequestHeader("From") String userEmail) {
         log.info("MainController. PUT-запрос. Внесение изменений в документ с documentId={} для пользователя с email={}", documentDTO.documentId(), userEmail);
-
         if (userDocumentsService.saveOrUpdateDocument(documentDTO, userEmail)) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Запрос на смену имени у документа
+    @PutMapping(value = "/update-document-name")
+    public ResponseEntity<?> updateDocumentName(@RequestBody @Valid UpdateDocumentNameDTO documentNameDTO, @RequestHeader("From") String userEmail) {
+        log.info("MainController. PUT-запрос. Запрос на переименование документа. documentId={}", documentNameDTO.documentId());
+        if (userDocumentsService.updateDocumentName(documentNameDTO, userEmail)) {
             return new ResponseEntity<>(HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -134,7 +142,6 @@ public class MainController {
     @DeleteMapping("/delete-document")
     public ResponseEntity<HttpStatus> deleteDocument(@RequestParam String documentId, @RequestHeader("From") String userEmail) {
         log.info("MainController. DELETE-запрос. Удаление одного документа по documentId={} для пользователя с email={}", documentId, userEmail);
-
         if (userDocumentsService.deleteOneDocument(documentId, userEmail)) {
             return new ResponseEntity<>(HttpStatus.OK);
         } else {
