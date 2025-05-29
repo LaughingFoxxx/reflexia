@@ -1,11 +1,13 @@
 package com.project.me.central_java_service.controller;
 
+import com.project.me.central_java_service.exception.BaseCoreServiceException;
 import com.project.me.central_java_service.model.dto.*;
 import com.project.me.central_java_service.model.entity.Document;
-import com.project.me.central_java_service.service.CoreService;
-import com.project.me.central_java_service.service.ExportFileService;
-import com.project.me.central_java_service.service.ReaderFileService;
-import com.project.me.central_java_service.service.UserDocumentsService;
+import com.project.me.central_java_service.model.entity.TextAiRequest;
+import com.project.me.central_java_service.model.entity.User;
+import com.project.me.central_java_service.repository.UserRepository;
+import com.project.me.central_java_service.service.*;
+import com.project.me.central_java_service.util.PreMadePrompts;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -34,17 +38,23 @@ public class MainController {
     private final UserDocumentsService userDocumentsService;
     private final ExportFileService exportFileService;
     private final ReaderFileService readerFileService;
+    private final UserRepository userRepository;
+    private final PreMadePrompts preMadePrompts;
+    private final VirusScannerService virusScannerService;
 
     @Autowired
     public MainController(CoreService coreService,
                           UserDocumentsService userDocumentsService,
                           ExportFileService exportFileService,
-                          ReaderFileService readerFileService
-    ) {
+                          ReaderFileService readerFileService,
+                          UserRepository userRepository, PreMadePrompts preMadePrompts, VirusScannerService virusScannerService) {
         this.coreService = coreService;
         this.userDocumentsService = userDocumentsService;
         this.readerFileService = readerFileService;
         this.exportFileService = exportFileService;
+        this.userRepository = userRepository;
+        this.preMadePrompts = preMadePrompts;
+        this.virusScannerService = virusScannerService;
     }
 
     // Запрос на обработку текста и занесение его в базу
@@ -52,24 +62,49 @@ public class MainController {
     @PostMapping("/process-text")
     public CompletableFuture<ResponseEntity<TextResponseDTO>> processText(
             @RequestBody @Valid TextRequestDTO textRequestDTO,
-            @RequestHeader(value = "From") String emailHeader) {
-
-        log.info("MainController. POST-запрос. text={}, instruction={}", textRequestDTO.text().substring(0, Math.min(20, textRequestDTO.text().length())), textRequestDTO.instruction());
+            @RequestHeader(value = "From") String userEmail) {
+        log.info("MainController. POST-запрос. text={}, instruction={}, email={}", textRequestDTO.text().substring(0, Math.min(20, textRequestDTO.text().length())), textRequestDTO.instruction(), userEmail);
         return coreService.processText(textRequestDTO)
                 .orTimeout(60, TimeUnit.SECONDS)
-                .thenApply(ResponseEntity::ok)
-                .exceptionally(throwable ->
-                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
-                );
+                .thenApply(result -> {
+                    TextAiRequest request = new TextAiRequest();
+                    request.setAiRequestId(UUID.randomUUID().toString());
+
+                    Map<String, String> prompts = preMadePrompts.getOptions();
+                    if (prompts.containsKey(textRequestDTO.instruction())) {
+                        request.setPrompt("Опция: " + prompts.get(textRequestDTO.instruction().toLowerCase()));
+                    } else {
+                        request.setPrompt(textRequestDTO.instruction());
+                    }
+
+                    request.setRequestText(textRequestDTO.text());
+                    request.setResponseText(result.result());
+                    request.setRequestTime(LocalDateTime.now());
+
+                    User user = userRepository.findUserByUserEmail(userEmail)
+                            .orElseThrow(
+                                    () -> new BaseCoreServiceException(HttpStatus.NOT_FOUND, "Пользователь не найден")
+                            );
+
+                    user.getRequests().add(request);
+                    userRepository.save(user);
+
+                    return ResponseEntity.ok().body(result);
+                })
+                .exceptionally(throwable -> {
+                    System.err.println("Ошибка: " + throwable.getMessage());
+                    return ResponseEntity.internalServerError().build();
+                });
     }
 
     // Запрос на считывание файла .doc или .docx
     @PostMapping(value = "/upload-document-file", produces = "application/json")
-    public ResponseEntity<Document> uploadMicrosoftFile(
+    public ResponseEntity<?> uploadMicrosoftFile(
             @RequestParam("file") MultipartFile file,
             @RequestHeader("From") String userEmail)
     {
         log.info("MainController. POST-запрос. Считывание файла: {}", file.getOriginalFilename());
+        if (!virusScannerService.scanFile(file)) { return ResponseEntity.badRequest().body("Файл заражён вирусом"); }
         Document document = readerFileService.readFile(userEmail, file.getOriginalFilename(), file);
         return new ResponseEntity<>(document, HttpStatus.OK);
     }
@@ -89,6 +124,7 @@ public class MainController {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
         return ResponseEntity.ok().body(resource);
     }
 
@@ -154,5 +190,13 @@ public class MainController {
     public ResponseEntity<Map<String, String>> getUserEmail(@RequestHeader("From") String userEmail) {
         log.info("MainController. GET-запрос. Получение email пользователя с email={}", userEmail);
         return ResponseEntity.ok().body(Map.of("email", userEmail));
+    }
+
+    // Запрос на получение истории запросов
+    @GetMapping("/get-request-history")
+    public ResponseEntity<List<TextAiRequest>> getRequestHistory(@RequestHeader("From") String userEmail) {
+        log.info("MainController. GET-запрос. Получение истории запросов для пользователя с email={}", userEmail);
+        List<TextAiRequest> res = userDocumentsService.getUserRequestHistory(userEmail);
+        return ResponseEntity.ok().body(res);
     }
 }

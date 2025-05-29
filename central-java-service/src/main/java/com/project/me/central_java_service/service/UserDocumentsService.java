@@ -6,6 +6,7 @@ import com.project.me.central_java_service.model.dto.SaveDocumentDTO;
 import com.project.me.central_java_service.exception.BaseCoreServiceException;
 import com.project.me.central_java_service.model.dto.UpdateDocumentNameDTO;
 import com.project.me.central_java_service.model.entity.Document;
+import com.project.me.central_java_service.model.entity.TextAiRequest;
 import com.project.me.central_java_service.model.entity.User;
 import com.project.me.central_java_service.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class UserDocumentsService {
             User user = new User();
             user.setUserEmail(userEmail);
             user.setDocuments(new ArrayList<>());
+            user.setRequests(new ArrayList<>());
             userRepository.save(user);
         } else {
             log.info("UserAndDocumentsService. Пользователь уже существует. Продолжаем работу");
@@ -131,6 +133,15 @@ public class UserDocumentsService {
         return result.getMatchedCount() > 0 && result.getModifiedCount() > 0;
     }
 
+    // Получение истории запросов пользователя
+    public List<TextAiRequest> getUserRequestHistory(String userEmail) {
+        log.info("UserAndDocumentsService. Получение истории запросов для пользователя с email={}", userEmail);
+
+        User user = getUser(userEmail);
+
+        return user.getRequests();
+    }
+
     // Получить новый пустой документ
     private Document getNewDocument() {
         Document document = new Document();
@@ -152,6 +163,7 @@ public class UserDocumentsService {
                 );
     }
 
+    // Получить документ пользователя по ID документа
     private Document getDocumentForUserByDocumentId(User user, String documentId) {
         return user.getDocuments()
                 .stream()

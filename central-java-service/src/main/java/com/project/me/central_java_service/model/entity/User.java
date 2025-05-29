@@ -21,6 +21,8 @@ public class User {
 
     private List<com.project.me.central_java_service.model.entity.Document> documents;
 
+    private List<TextAiRequest> requests;
+
     public List<com.project.me.central_java_service.model.entity.Document> getDocuments() {
         Collections.sort(this.documents); // Убедимся, что список отсортирован
         return this.documents;

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.me.central_java_service.model.dto.TextRequestDTO;
 import com.project.me.central_java_service.model.dto.TextResponseDTO;
+import com.project.me.central_java_service.model.entity.User;
+import com.project.me.central_java_service.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;

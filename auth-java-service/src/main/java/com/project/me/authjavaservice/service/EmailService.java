@@ -24,6 +24,7 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(emailTo);
+            helper.setFrom("confirmation@reflexia-ai.ru");
             helper.setSubject("Подтверждение email");
             helper.setText(buildEmailContent(verificationCode), true);
 

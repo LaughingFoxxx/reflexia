@@ -80,7 +80,7 @@ public class DocXFileReader implements FileReader {
                 }
 
                 // Close paragraph div
-                htmlContent.append("</p><br>");
+                htmlContent.append("</p>");
             }
         } catch (IOException e) {
             throw new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Ошибка чтения файла");
