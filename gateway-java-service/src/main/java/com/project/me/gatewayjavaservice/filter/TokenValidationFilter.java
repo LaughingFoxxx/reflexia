@@ -32,9 +32,10 @@ public class TokenValidationFilter implements GlobalFilter, Ordered {
     @Autowired
     public TokenValidationFilter(WebClient.Builder webClientBuilder,
                                  ReactiveRedisTemplate<String, String> reactiveRedisTemplate,
-                                 @Value("${service.code}") String gatewayCode
+                                 @Value("${service.code}") String gatewayCode,
+                                 @Value("${service.auth-url}") String authUrl
     ) {
-        this.webClient = webClientBuilder.baseUrl("http://localhost:8083").build();
+        this.webClient = webClientBuilder.baseUrl(authUrl).build();
         this.reactiveRedisTemplate = reactiveRedisTemplate;
         this.gatewayCode = gatewayCode;
     }

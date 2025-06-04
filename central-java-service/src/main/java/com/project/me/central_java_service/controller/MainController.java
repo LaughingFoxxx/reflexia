@@ -72,7 +72,7 @@ public class MainController {
 
                     Map<String, String> prompts = preMadePrompts.getOptions();
                     if (prompts.containsKey(textRequestDTO.instruction())) {
-                        request.setPrompt("Опция: " + prompts.get(textRequestDTO.instruction().toLowerCase()));
+                        request.setPrompt("Опция: " + prompts.get(textRequestDTO.instruction()).toLowerCase());
                     } else {
                         request.setPrompt(textRequestDTO.instruction());
                     }

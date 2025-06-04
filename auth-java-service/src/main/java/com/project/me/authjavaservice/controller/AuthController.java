@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static com.project.me.authjavaservice.util.AuthUtil.hideEmail;
+
 @Slf4j
 @RestController
 @RequestMapping("/auth")
@@ -30,7 +32,7 @@ public class AuthController {
     // Регистрация аккаунта
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody @Valid EmailPasswordRequestDTO requestDTO) {
-        log.info("AuthController. POST-запрос. Регистрация: email={}", requestDTO.email());
+        log.info("AuthController. POST-запрос. Регистрация: email={}", hideEmail(requestDTO.email()));
 
         if (authService.register(requestDTO.email(), requestDTO.password())) {
             return ResponseEntity.ok("Регистрация прошла успешно");
@@ -41,7 +43,7 @@ public class AuthController {
     // Вход в аккаунт
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login (@RequestBody @Valid EmailPasswordRequestDTO requestDTO, HttpServletResponse response) {
-        log.info("AuthController. POST-запрос. Логин: email={}", requestDTO.email());
+        log.info("AuthController. POST-запрос. Логин: email={}", hideEmail(requestDTO.email()));
 
         authService.login(requestDTO.email(), requestDTO.password(), response);
 
@@ -80,7 +82,7 @@ public class AuthController {
     @PostMapping("/verify")
     public ResponseEntity<String> verifyEmail(@RequestBody Map<String, String> request) {
         log.info("AuthController. POST-запрос. Верификация аккаунта по коду из почты: email={}, code={}",
-                request.get("email"), request.get("code"));
+                hideEmail(request.get("email")), request.get("code"));
 
         authService.verifyEmail(request.get("email"), request.get("code"));
 

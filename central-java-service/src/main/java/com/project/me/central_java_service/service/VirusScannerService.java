@@ -2,6 +2,7 @@ package com.project.me.central_java_service.service;
 
 import com.project.me.central_java_service.exception.BaseCoreServiceException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,8 +19,8 @@ import java.util.Map;
 public class VirusScannerService {
     private final ClamavClient clamavClient;
 
-    public VirusScannerService() {
-        this.clamavClient = new ClamavClient("localhost", 3310);
+    public VirusScannerService(@Value("${servers.clamav}") String clamavBootstrap) {
+        this.clamavClient = new ClamavClient(clamavBootstrap, 3310);
     }
 
     public boolean scanFile(MultipartFile file) {
@@ -28,12 +29,13 @@ public class VirusScannerService {
         }
 
         try (InputStream inputStream = file.getInputStream()) {
-            ScanResult.VirusFound res = (ScanResult.VirusFound) clamavClient.scan(inputStream);
-            Map<String, Collection<String>> viruses = res.getFoundViruses();
-            if (!viruses.isEmpty()) {
-                String virusNames = String.join(",", (CharSequence) res.getFoundViruses().values());
-                log.warn("VirusScannerService. Обрнаружен небезопасный файл {}, вирус(ы): {}", file.getOriginalFilename(), virusNames);
-                throw new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Найден вирус");
+            ScanResult scanResult = clamavClient.scan(inputStream);
+            if (scanResult instanceof ScanResult.OK) {
+                return true;
+            } else if (scanResult instanceof ScanResult.VirusFound) {
+                Map<String, Collection<String>> viruses = ((ScanResult.VirusFound) scanResult).getFoundViruses();
+                log.warn("VirusScannerService. Обнаружены вирусы в файле {}", file.getOriginalFilename());
+                throw new BaseCoreServiceException(HttpStatus.BAD_REQUEST, "Обнаружены вирусы");
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

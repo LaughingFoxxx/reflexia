@@ -7,7 +7,6 @@ import com.project.me.authjavaservice.model.User;
 import com.project.me.authjavaservice.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+
+import static com.project.me.authjavaservice.util.AuthUtil.hideEmail;
 
 @Slf4j
 @Service
@@ -45,12 +46,11 @@ public class AuthService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional
     public boolean register(String email, String password) {
         log.info("AuthService. Регистрация: email={}", email);
 
         if (userRepository.findByEmail(email).isPresent()) {
-            log.warn("AuthService. Пользователь с email={} уже существует", email);
+            log.warn("AuthService. Пользователь с email={} уже существует", hideEmail(email));
             throw new BaseAuthException(HttpStatus.CONFLICT, "Пользователь уже существует");
         }
 
@@ -67,16 +67,12 @@ public class AuthService {
         return res;
     }
 
-    @Transactional
     public void verifyEmail(String email, String verificationCode) {
-        log.info("AuthService. Подтверждение email: email={}", email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(
-                        () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-                );
+        log.info("AuthService. Подтверждение email: email={}", hideEmail(email));
+        User user = getUser(email);
 
         if (user.isVerified()) {
-            log.warn("AuthService. email={} уже подтвержден", email);
+            log.warn("AuthService. email={} уже подтвержден", hideEmail(email));
             throw new RuntimeException("Email уже подтвержден");
         }
 
@@ -89,31 +85,27 @@ public class AuthService {
         user.setVerificationCode(null);
 
         userRepository.save(user);
-        log.info("AuthService. Пользователь с email={} успешно подтвердил адрес электронной почты", email);
+        log.info("AuthService. Пользователь с email={} успешно подтвердил адрес электронной почты", hideEmail(email));
 
         log.info("AuthService. Отправляем запрос на создание пользователя на Core-сервис для пользователя {} через топик \"new-user\"", email);
         try {
-            kafkaTemplate.send("new-user", objectMapper.writeValueAsString(Map.of("email", email)));
+            kafkaTemplate.send("new-user", objectMapper.writeValueAsString(Map.of("email", hideEmail(email))));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @Transactional
     public void login(String email, String password, HttpServletResponse response) {
-        log.info("AuthService. Вход в приложение: email={}", email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(
-                        () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-                );
+        log.info("AuthService. Вход в приложение: email={}", hideEmail(email));
+        User user = getUser(email);
 
         if (!user.isVerified()) {
-            log.warn("AuthService. Email={} не подтвержден", email);
+            log.warn("AuthService. Email={} не подтвержден", hideEmail(email));
             throw new RuntimeException("Подтвердите email перед входом");
         }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            log.warn("AuthService. Неверный пароль для email={}", email);
+            log.warn("AuthService. Неверный пароль для email={}", hideEmail(email));
             throw new BaseAuthException(HttpStatus.UNAUTHORIZED, "Неверный пароль");
         }
 
@@ -131,21 +123,17 @@ public class AuthService {
         setRefreshTokenCookie(refreshToken, response);
 
 
-        log.info("AuthService. Успешный вход в приложение для email={}", email);
+        log.info("AuthService. Успешный вход в приложение для email={}", hideEmail(email));
     }
 
-    @Transactional
     public void refreshAccessToken(String refreshToken, HttpServletResponse response) {
         log.info("AuthService. Обновление токена: token={}", refreshToken);
         String email = jwtUtil.validateToken(refreshToken);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(
-                        () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-                );
+        User user = getUser(email);
 
         if (!refreshToken.equals(user.getRefreshToken())) {
-            log.warn("AuthService. Неверный refresh_token={} для email={}", refreshToken, email);
+            log.warn("AuthService. Неверный refresh_token={} для email={}", refreshToken, hideEmail(email));
             throw new RuntimeException("Неверный refresh_token");
         }
 
@@ -156,13 +144,14 @@ public class AuthService {
         setAccessTokenCookie(newAccessToken, response);
     }
 
-    @Transactional
     public void logout(String token, HttpServletResponse response) {
         log.info("AuthService. Запрос на выход из приложения");
 
         log.info("AuthService. Добававление запрошенного access_токена в черный список...");
         String email = jwtUtil.validateToken(token);
+
         long accessTokenExpirationTime = jwtUtil.getRemainingTTL(token);
+
         if (!blacklistService.isTokenInBlacklist(token)) {
             blacklistService.addTokenToRedisBlacklist(token, accessTokenExpirationTime);
             log.info("AuthService. access_token добавлен в черный список");
@@ -171,10 +160,7 @@ public class AuthService {
         }
 
         log.info("AuthService. Поиск и добавление refresh_токена в черный список...");
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(
-                        () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-                );
+        User user = getUser(email);
         long refreshTokenExpirationTime = jwtUtil.getRemainingTTL(user.getRefreshToken());
         if (!blacklistService.isTokenInBlacklist(user.getRefreshToken())) {
             log.info("AuthService. refresh_token добавлен в черный список");
@@ -189,12 +175,9 @@ public class AuthService {
         setCookieMaxAgeToZeroForRefreshToken(response);
     }
 
-    @Transactional
     public void resetUserForPasswordChange(String email) {
-        log.info("AuthService. Начинается смена пароля для email={}", email);
-        User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-        );
+        log.info("AuthService. Начинается смена пароля для email={}", hideEmail(email));
+        User user = getUser(email);
         String verificationCode = String.valueOf((int) (Math.random() * 900000) + 100000); // 6-значный код
         user.setVerified(false);
         user.setVerificationCode(verificationCode);
@@ -203,14 +186,11 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    @Transactional
     public void setNewPasswordForUser(String email, String password) {
-        log.info("AuthService. Установка нового пароля для email={}", email);
-        User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь с email: " + email + " не найден.")
-        );
+        log.info("AuthService. Установка нового пароля для email={}", hideEmail(email));
+        User user = getUser(email);
         user.setPassword(passwordEncoder.encode(password));
-        log.info("AuthService. Новый пароль установлен для пользователя email={}", email);
+        log.info("AuthService. Новый пароль установлен для пользователя email={}", hideEmail(email));
         userRepository.save(user);
     }
 
@@ -248,5 +228,12 @@ public class AuthService {
         cookie.setPath("/");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
+    }
+
+    private User getUser(String userEmail) {
+        return userRepository.findByEmail(userEmail)
+                .orElseThrow(
+                        () -> new BaseAuthException(HttpStatus.NOT_FOUND, "Пользователь не найден")
+                );
     }
 }
